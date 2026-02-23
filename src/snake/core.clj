@@ -4,13 +4,15 @@
             [clojure.string :as str])
   (:gen-class))
 
-;; =============================
+;; ============================================
 ;; Configuration
-;; =============================
+;; ============================================
 
 (def cell-size 20)
 (def board-width 30)
 (def board-height 20)
+
+(def move-interval 500) ;; milliseconds per snake step
 
 (def directions
   {:up    [0 -1]
@@ -29,9 +31,9 @@
 (def KEY-LEFT 37)
 (def KEY-RIGHT 39)
 
-;; =============================
-;; Pure Game Logic
-;; =============================
+;; ============================================
+;; Game Logic (Pure)
+;; ============================================
 
 (defn random-food []
   [(rand-int board-width)
@@ -40,10 +42,11 @@
 (defn initial-state []
   {:snake [[15 10]]
    :dir :right
-   :next-dir :right
+   :next-dir nil
    :food (random-food)
    :score 0
-   :game-over? false})
+   :game-over? false
+   :last-move-time 0})
 
 (defn move [[x y] [dx dy]]
   [(+ x dx) (+ y dy)])
@@ -60,36 +63,51 @@
 (defn valid-turn? [current next]
   (not= current (opposite next)))
 
-(defn step [state]
+(defn step-snake [state]
+  (let [dir-key (or (:next-dir state) (:dir state))
+        dir     (directions dir-key)
+        head    (first (:snake state))
+        new-head (move head dir)
+        snake   (:snake state)
+        ate?    (= new-head (:food state))]
+    (cond
+      (wall-hit? new-head)
+      (assoc state :game-over? true)
+
+      (collision? new-head snake)
+      (assoc state :game-over? true)
+
+      ate?
+      (-> state
+          (assoc :dir dir-key
+                 :next-dir nil
+                 :snake (cons new-head snake)
+                 :food (random-food))
+          (update :score inc))
+
+      :else
+      (-> state
+          (assoc :dir dir-key
+                 :next-dir nil
+                 :snake (cons new-head (butlast snake)))))))
+
+;; ============================================
+;; Fixed Timestep Update
+;; ============================================
+
+(defn update-state [state]
   (if (:game-over? state)
     state
-    (let [;; Apply buffered direction at start of tick
-          state     (assoc state :dir (:next-dir state))
-          dir       (directions (:dir state))
-          head      (first (:snake state))
-          new-head  (move head dir)
-          snake     (:snake state)
-          ate-food? (= new-head (:food state))]
-      (cond
-        (wall-hit? new-head)
-        (assoc state :game-over? true)
-
-        (collision? new-head snake)
-        (assoc state :game-over? true)
-
-        ate-food?
+    (let [now (q/millis)]
+      (if (> (- now (:last-move-time state)) move-interval)
         (-> state
-            (update :snake #(cons new-head %))
-            (assoc :food (random-food))
-            (update :score inc))
+            step-snake
+            (assoc :last-move-time now))
+        state))))
 
-        :else
-        (-> state
-            (update :snake #(cons new-head (butlast %))))))))
-
-;; =============================
+;; ============================================
 ;; Rendering
-;; =============================
+;; ============================================
 
 (defn draw-cell [[x y] [r g b]]
   (q/fill r g b)
@@ -113,7 +131,6 @@
   (q/text-size 16)
   (q/text (str "Score: " (:score state)) 10 20)
 
-  ;; Game Over Overlay
   (when (:game-over? state)
     (q/text-size 32)
     (q/text "GAME OVER"
@@ -124,22 +141,20 @@
             (/ (* board-width cell-size) 3)
             (+ (/ (* board-height cell-size) 2) 30))))
 
-;; =============================
+;; ============================================
 ;; Input Handling
-;; =============================
+;; ============================================
 
 (defn key-pressed [state event]
-  ;; (let [k  (some-> (:key event) str str/lower-case)
   (let [k  (some-> (:key event))
         kc (:key-code event)]
-
-    ;; Restart ALWAYS works
-    (when (= k :r)
-      (println "Restart pressed"))
-
-    (if (= k :r)
+    (cond
+      ;; Restart
+      (= k :r)
       (initial-state)
 
+      ;; Direction input
+      :else
       (let [desired
             (cond
               (= kc KEY-UP) :up
@@ -151,25 +166,25 @@
               (= k :a) :left
               (= k :d) :right
               :else nil)]
-
         (if (and desired
-                 (valid-turn? (:dir state) desired))
+                 (valid-turn? (:dir state) desired)
+                 (nil? (:next-dir state))) ;; only one turn per tick
           (assoc state :next-dir desired)
           state)))))
 
-;; =============================
-;; Quil Sketch Entry Point
-;; =============================
+;; ============================================
+;; Entry Point
+;; ============================================
 
 (defn -main [& _]
   (q/defsketch snake
-    :title "Snake (Clojure + Quil)"
+    :title "Snake (Fixed Timestep)"
     :size [(* board-width cell-size)
            (* board-height cell-size)]
     :setup (fn []
-             (q/frame-rate 5)
+             (q/frame-rate 60) ;; smooth rendering
              (initial-state))
-    :update step
+    :update update-state
     :draw draw-state
     :key-pressed key-pressed
     :middleware [m/fun-mode]))
