@@ -1,6 +1,7 @@
 (ns snake.core
   (:require [quil.core :as q]
-            [quil.middleware :as m])
+            [quil.middleware :as m]
+            [clojure.string :as str])
   (:gen-class))
 
 ;; =============================
@@ -17,8 +18,19 @@
    :left  [-1 0]
    :right [1 0]})
 
+(def opposite
+  {:up :down
+   :down :up
+   :left :right
+   :right :left})
+
+(def KEY-UP 38)
+(def KEY-DOWN 40)
+(def KEY-LEFT 37)
+(def KEY-RIGHT 39)
+
 ;; =============================
-;; Game Logic (Pure)
+;; Pure Game Logic
 ;; =============================
 
 (defn random-food []
@@ -36,19 +48,24 @@
 (defn move [[x y] [dx dy]]
   [(+ x dx) (+ y dy)])
 
-(defn collision? [pos snake]
-  (some #{pos} snake))
-
 (defn wall-hit? [[x y]]
   (or (< x 0)
       (>= x board-width)
       (< y 0)
       (>= y board-height)))
 
+(defn collision? [pos snake]
+  (some #{pos} snake))
+
+(defn valid-turn? [current next]
+  (not= current (opposite next)))
+
 (defn step [state]
   (if (:game-over? state)
     state
-    (let [dir       (directions (:dir state))
+    (let [;; Apply buffered direction at start of tick
+          state     (assoc state :dir (:next-dir state))
+          dir       (directions (:dir state))
           head      (first (:snake state))
           new-head  (move head dir)
           snake     (:snake state)
@@ -96,7 +113,7 @@
   (q/text-size 16)
   (q/text (str "Score: " (:score state)) 10 20)
 
-  ;; Game Over
+  ;; Game Over Overlay
   (when (:game-over? state)
     (q/text-size 32)
     (q/text "GAME OVER"
@@ -108,41 +125,41 @@
             (+ (/ (* board-height cell-size) 2) 30))))
 
 ;; =============================
-;; Input
+;; Input Handling
 ;; =============================
-
-(def opposite
-  {:up :down
-   :down :up
-   :left :right
-   :right :left})
-
-;; =============================
-;; Quil Sketch
-;; =============================
-
-;; (defn key-pressed [state event]
-;;   (println event)
-;;   state)
 
 (defn key-pressed [state event]
-  (let [k  (:key event)]
-    (cond
-      (= k :up) (if (= (:dir state) :down) state (assoc state :dir :up))
-      (= k :down) (if (= (:dir state) :up) state (assoc state :dir :down))
-      (= k :left) (if (= (:dir state) :right) state (assoc state :dir :left))
-      (= k :right) (if (= (:dir state) :left) state (assoc state :dir :right))
+  ;; (let [k  (some-> (:key event) str str/lower-case)
+  (let [k  (some-> (:key event))
+        kc (:key-code event)]
 
-      ;; WASD
-      (= k :w) (if (= (:dir state) :down) state (assoc state :dir :up))
-      (= k :s) (if (= (:dir state) :up) state (assoc state :dir :down))
-      (= k :a) (if (= (:dir state) :right) state (assoc state :dir :left))
-      (= k :d) (if (= (:dir state) :left) state (assoc state :dir :right))
+    ;; Restart ALWAYS works
+    (when (= k :r)
+      (println "Restart pressed"))
 
-      ;; Restart
-      (= k :r) (initial-state)
+    (if (= k :r)
+      (initial-state)
 
-      :else state)))
+      (let [desired
+            (cond
+              (= kc KEY-UP) :up
+              (= kc KEY-DOWN) :down
+              (= kc KEY-LEFT) :left
+              (= kc KEY-RIGHT) :right
+              (= k :w) :up
+              (= k :s) :down
+              (= k :a) :left
+              (= k :d) :right
+              :else nil)]
+
+        (if (and desired
+                 (valid-turn? (:dir state) desired))
+          (assoc state :next-dir desired)
+          state)))))
+
+;; =============================
+;; Quil Sketch Entry Point
+;; =============================
 
 (defn -main [& _]
   (q/defsketch snake
