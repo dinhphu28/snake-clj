@@ -15,8 +15,10 @@
     (max min-interval interval)))
 
 (defn update-state [state]
-  (if (:game-over? state)
-    state
+  (cond
+    (:game-over? state) state
+    (:paused? state) state
+    :else
     (let [now (q/millis)]
       (if (> (- now (:last-move-time state))
              (current-interval (:score state)))

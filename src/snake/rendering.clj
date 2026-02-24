@@ -29,6 +29,13 @@
   (q/text-size 16)
   (q/text (str "Score: " (:score state)) 10 20)
 
+  (when (:paused? state)
+    (q/fill 255 255 0)
+    (q/text-size 32)
+    (q/text "PAUSED"
+            (/ (* board-width cell-size) 3)
+            (/ (* board-height cell-size) 2)))
+
   (when (:game-over? state)
     (q/text-size 32)
     (q/text "GAME OVER"
