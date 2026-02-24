@@ -31,11 +31,6 @@
    :left :right
    :right :left})
 
-(def KEY-UP 38)
-(def KEY-DOWN 40)
-(def KEY-LEFT 37)
-(def KEY-RIGHT 39)
-
 ;; ============================================
 ;; Game Logic (Pure)
 ;; ============================================
@@ -170,10 +165,10 @@
       :else
       (let [desired
             (cond
-              (= kc KEY-UP) :up
-              (= kc KEY-DOWN) :down
-              (= kc KEY-LEFT) :left
-              (= kc KEY-RIGHT) :right
+              (= k :up) :up
+              (= k :down) :down
+              (= k :left) :left
+              (= k :right) :right
               (= k :w) :up
               (= k :s) :down
               (= k :a) :left
