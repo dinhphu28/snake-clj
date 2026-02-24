@@ -6,17 +6,25 @@
 ;; Game Logic (Pure)
 ;; ============================================
 
-(defn random-food []
+(defn random-food-position []
   [(rand-int board-width)
    (rand-int board-height)])
+
+(defn spawn-food [snake]
+  (loop []
+    (let [pos (random-food-position)]
+      (if (some #{pos} snake)
+        (recur)
+        pos))))
 
 (defn initial-state []
   {:snake [[15 10]]
    :dir :right
    :next-dir nil
-   :food (random-food)
+   :food (spawn-food [[15 10]])
    :score 0
    :game-over? false
+   :paused? false
    :last-move-time 0})
 
 (defn move [[x y] [dx dy]]
@@ -53,7 +61,7 @@
           (assoc :dir dir-key
                  :next-dir nil
                  :snake (cons new-head snake)
-                 :food (random-food))
+                 :food (spawn-food (cons new-head snake)))
           (update :score inc))
 
       :else
