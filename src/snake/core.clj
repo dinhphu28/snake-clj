@@ -12,7 +12,12 @@
 (def board-width 30)
 (def board-height 20)
 
-(def move-interval 500) ;; milliseconds per snake step
+;; (def move-interval 500) ;; milliseconds per snake step
+
+(def base-interval 120)
+(def min-interval 50)
+(def speed-step 5) ;; every 5 points
+(def speed-increase 10) ;; reduce 10ms each step
 
 (def directions
   {:up    [0 -1]
@@ -95,11 +100,19 @@
 ;; Fixed Timestep Update
 ;; ============================================
 
+(defn current-interval [score]
+  (let [reduction (* (quot score speed-step)
+                     speed-increase)
+        interval (- base-interval reduction)]
+    (max min-interval interval)))
+
 (defn update-state [state]
   (if (:game-over? state)
     state
     (let [now (q/millis)]
-      (if (> (- now (:last-move-time state)) move-interval)
+      ;; (if (> (- now (:last-move-time state)) move-interval)
+      (if (> (- now (:last-move-time state))
+             (current-interval (:score state)))
         (-> state
             step-snake
             (assoc :last-move-time now))
