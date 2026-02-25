@@ -15,15 +15,17 @@
     (max min-interval interval)))
 
 (defn update-state [state]
-  (cond
-    (:game-over? state) state
-    (:paused? state) state
-    :else
+  (case (:mode state)
+
+    :playing
     (let [now (q/millis)]
       (if (> (- now (:last-move-time state))
              (current-interval (:score state)))
         (-> state
             step-snake
             (assoc :last-move-time now))
-        state))))
+        state))
+
+    ;; other modes do not update game logic
+    state))
 

@@ -17,15 +17,18 @@
         (recur)
         pos))))
 
+(defn initial-game []
+  (let [snake [[15 10]]]
+    {:mode :playing
+     :snake snake
+     :dir :right
+     :next-dir nil
+     :food (spawn-food snake)
+     :score 0
+     :last-move-time 0}))
+
 (defn initial-state []
-  {:snake [[15 10]]
-   :dir :right
-   :next-dir nil
-   :food (spawn-food [[15 10]])
-   :score 0
-   :game-over? false
-   :paused? false
-   :last-move-time 0})
+  {:mode :menu})
 
 (defn move [[x y] [dx dy]]
   [(+ x dx) (+ y dy)])
@@ -51,18 +54,19 @@
         ate?    (= new-head (:food state))]
     (cond
       (wall-hit? new-head)
-      (assoc state :game-over? true)
+      (assoc state :mode :game-over)
 
       (collision? new-head snake)
-      (assoc state :game-over? true)
+      (assoc state :mode :game-over)
 
       ate?
-      (-> state
-          (assoc :dir dir-key
-                 :next-dir nil
-                 :snake (cons new-head snake)
-                 :food (spawn-food (cons new-head snake)))
-          (update :score inc))
+      (let [new-snake (cons new-head snake)]
+        (-> state
+            (assoc :dir dir-key
+                   :next-dir nil
+                   :snake new-snake
+                   :food (spawn-food new-snake))
+            (update :score inc)))
 
       :else
       (-> state

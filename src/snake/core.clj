@@ -11,7 +11,7 @@
 
 (defn -main [& _]
   (q/defsketch snake
-    :title "Snake (Fixed Timestep)"
+    :title "Snake (State Machine)"
     :size [(* board-width cell-size)
            (* board-height cell-size)]
     :setup (fn []
