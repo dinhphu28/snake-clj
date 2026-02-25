@@ -7,13 +7,15 @@
 ;; Input Handling
 ;; ============================================
 
+(def ENTER_KEY_CODE 10)
+
 (defn key-pressed [state event]
   (let [k  (some-> (:key event))
         kc (:key-code event)]
     (case (:mode state)
 
       :menu
-      (if (= kc 10) ;; Enter key
+      (if (= kc ENTER_KEY_CODE)
         (initial-game)
         state)
 
