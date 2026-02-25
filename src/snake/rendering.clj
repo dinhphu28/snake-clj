@@ -14,35 +14,46 @@
           cell-size
           cell-size))
 
-(defn draw-state [state]
-  (q/background 30)
-
-  ;; Food
+(defn draw-playing [state]
   (draw-cell (:food state) [255 0 0])
-
-  ;; Snake
   (doseq [segment (:snake state)]
     (draw-cell segment [0 200 0]))
 
-  ;; Score
+  (q/push-style)
   (q/fill 255)
+  (q/text-align :left :top)
   (q/text-size 16)
-  (q/text (str "Score: " (:score state)) 10 20)
+  (q/text (str "Score: " (:score state)) 10 10)
+  (q/pop-style))
 
-  (when (:paused? state)
-    (q/fill 255 255 0)
-    (q/text-size 32)
-    (q/text "PAUSED"
-            (/ (* board-width cell-size) 3)
-            (/ (* board-height cell-size) 2)))
+(defn draw-centered-text [text size y-offset]
+  (q/fill 255)
+  (q/text-align :center :center)
+  (q/text-size size)
+  (q/text text
+          (/ (* board-width cell-size) 2)
+          (+ (/ (* board-height cell-size) 2)
+             y-offset)))
 
-  (when (:game-over? state)
-    (q/text-size 32)
-    (q/text "GAME OVER"
-            (/ (* board-width cell-size) 4)
-            (/ (* board-height cell-size) 2))
-    (q/text-size 16)
-    (q/text "Press R to restart"
-            (/ (* board-width cell-size) 3)
-            (+ (/ (* board-height cell-size) 2) 30))))
+(defn draw-state [state]
+  (q/background 30)
+  (case (:mode state)
+
+    :menu
+    (do
+      (draw-centered-text "SNAKE" 48 -40)
+      (draw-centered-text "Press ENTER to Start" 18 30))
+
+    :playing
+    (draw-playing state)
+
+    :paused
+    (do
+      (draw-playing state)
+      (draw-centered-text "PAUSED" 32 0))
+    :game-over
+    (do
+      (draw-playing state)
+      (draw-centered-text "GAME OVER" 32 0)
+      (draw-centered-text "Press R to Restart" 18 30))))
 
