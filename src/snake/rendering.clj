@@ -1,6 +1,7 @@
 (ns snake.rendering
   (:require
    [snake.configuration :refer [cell-size board-width board-height]]
+   [snake.food :refer [food-types]]
    [quil.core :as q]))
 
 ;; ============================================
@@ -14,8 +15,31 @@
           cell-size
           cell-size))
 
+(defn draw-food [food]
+  (case (:type food)
+
+    :normal
+    (draw-cell (:pos food)
+               (get-in food-types [:normal :color]))
+
+    :bonus
+    (draw-cell (:pos food)
+               (get-in food-types [:bonus :color]))
+
+    :slow
+    (draw-cell (:pos food)
+               (get-in food-types [:slow :color]))
+
+    :fast
+    (draw-cell (:pos food)
+               (get-in food-types [:fast :color]))))
+
 (defn draw-playing [state]
-  (draw-cell (:food state) [255 0 0])
+  (draw-food (:food state))
+
+  (when-let [special-food (:special-food state)]
+    (draw-food special-food))
+
   (doseq [segment (:snake state)]
     (draw-cell segment [0 200 0]))
 
