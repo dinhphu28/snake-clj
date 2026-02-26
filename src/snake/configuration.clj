@@ -8,8 +8,8 @@
 (def board-width 30)
 (def board-height 20)
 
-(def base-interval 500)
-(def min-interval 50)
+(def base-interval 200)
+(def min-interval 10)
 (def speed-step 5) ;; every 5 points
 (def speed-increase 10) ;; reduce 10ms each step
 

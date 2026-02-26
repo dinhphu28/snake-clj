@@ -1,21 +1,12 @@
 (ns snake.game-logic
   (:require
-   [snake.configuration :refer [board-width board-height directions opposite]]))
+   [quil.core :as q]
+   [snake.configuration :refer [board-width board-height directions opposite]]
+   [snake.food :refer [spawn-food food-types effect-durations]]))
 
 ;; ============================================
 ;; Game Logic (Pure)
 ;; ============================================
-
-(defn random-food-position []
-  [(rand-int board-width)
-   (rand-int board-height)])
-
-(defn spawn-food [snake]
-  (loop []
-    (let [pos (random-food-position)]
-      (if (some #{pos} snake)
-        (recur)
-        pos))))
 
 (defn initial-game []
   (let [snake [[15 10]]]
@@ -23,8 +14,11 @@
      :snake snake
      :dir :right
      :next-dir nil
-     :food (spawn-food snake)
      :score 0
+     :food (spawn-food snake :normal)
+     :special-food nil
+     :active-effect nil
+     :effect-until 0
      :last-move-time 0}))
 
 (defn initial-state []
@@ -51,7 +45,9 @@
         head    (first (:snake state))
         new-head (move head dir)
         snake   (:snake state)
-        ate?    (= new-head (:food state))]
+        ate?    (= new-head (:pos (:food state)))
+        ate-special? (and (:special-food state)
+                          (= new-head (:pos (:special-food state))))]
     (cond
       (wall-hit? new-head)
       (assoc state :mode :game-over)
@@ -65,8 +61,21 @@
             (assoc :dir dir-key
                    :next-dir nil
                    :snake new-snake
-                   :food (spawn-food new-snake))
+                   :food (spawn-food new-snake :normal))
             (update :score inc)))
+
+      ate-special?
+      (let [new-snake (cons new-head snake)
+            sf (:special-food state)
+            ef (get-in food-types [(:type sf) :effect])]
+        (-> state
+            (assoc :dir dir-key
+                   :next-dir nil
+                   :snake new-snake
+                   :special-food nil
+                   :active-effect ef
+                   :effect-until (+ (q/millis) effect-durations))
+            (update :score + (get-in food-types [(:type (:special-food state)) :score]))))
 
       :else
       (-> state
