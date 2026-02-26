@@ -12,8 +12,8 @@
 (defn effect-interval-reduction [state curr-interval]
   (if-let [ef (:active-effect state)]
     (cond
-      (= ef :slow) (quot curr-interval -2)
-      (= ef :fast) (quot curr-interval 2)
+      (= ef :slow) (* (quot curr-interval 10) -3) ;; slow increases interval by 30%
+      (= ef :fast) (quot curr-interval 4) ;; fast reduces interval by 25%
       :else 0)
     0))
 
